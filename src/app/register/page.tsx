@@ -1,6 +1,7 @@
 'use client'
 import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
+import { signIn } from 'next-auth/react'
 
 function RegisterPage() {
   const [error, setError] = useState()
@@ -16,7 +17,13 @@ function RegisterPage() {
         password: formData.get('password'),
         fullname: formData.get('fullname'),
       })
-      console.log(res)
+
+      const resAuth = await signIn('credentials', {
+        email: res.data.email,
+        password: formData.get('password'),
+      })
+
+      console.log(resAuth)
     } catch (error) {
       console.log(error)
       if (error instanceof AxiosError) {

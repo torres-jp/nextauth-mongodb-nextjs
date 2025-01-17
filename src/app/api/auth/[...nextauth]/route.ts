@@ -1,5 +1,8 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import { connectDB } from '@/libs/mongodb'
+import User from '@/models/user'
+import bcrypt from 'bcryptjs'
 
 const handler = NextAuth({
   providers: [
@@ -14,12 +17,37 @@ const handler = NextAuth({
         },
       },
       async authorize(credentials, req) {
-        const user = { id: '1', fullname: 'jhon doe', email: 'jhon@mail.com' }
+        await connectDB()
+        console.log(req)
 
-        return user
+        const userFound = await User.findOne({
+          email: credentials?.email,
+        })
+
+        if (!userFound) throw new Error('User not found')
+
+        const passMatch = await bcrypt.compare(
+          credentials!.password,
+          userFound.password
+        )
+        if (!passMatch) throw new Error('Invalid credentials')
+
+        return userFound
       },
     }),
   ],
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) token.user = user
+      return token
+    },
+    session({ session, token }) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      session.user = token.user as any
+
+      return session
+    },
+  },
 })
 
 export { handler as GET, handler as POST }
